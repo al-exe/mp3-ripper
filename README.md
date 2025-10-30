@@ -1,6 +1,6 @@
 # mp3-ripper
 
-Lightning-speed MP3 downloading and tagging from YouTube — with automatic cover embedding.
+Lightning-speed MP3 downloading and tagging from YouTube with automatic cover embedding.
 
 ## 🎧 What This Does
 
@@ -10,8 +10,6 @@ A lightweight Python tool that:
 - Saves files into a folder on your Desktop
 - Extracts and crops thumbnails to **480×480**
 - Embeds artwork into MP3 metadata as the album cover
-- Deletes the temporary image files afterward
-- Falls back to an interactive prompt if you don't provide arguments
 
 Perfect for building local playlists and clean, metadata-tagged music libraries.
 
@@ -135,22 +133,3 @@ Example layout:
 
 Music downloads → cleaned → tagged → artwork embedded.  
 Just run & enjoy your organized local MP3 library 🎶
-
----
-
-## 📝 License
-
-MIT — use freely, modify, and share.
-
----
-
-## ⭐ Future Enhancements
-
-- Progress bar UI
-- Optional metadata prompts (artist / album / genre)
-- pip / brew install package
-- GUI wrapper
-
----
-
-PRs and stars welcome!
