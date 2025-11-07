@@ -29,11 +29,16 @@ def read_urls_from_stdin():
         return []
     return [ln.strip() for ln in sys.stdin.read().splitlines() if ln.strip()]
 
-def interactive_prompt(args):
+def interactive_prompt(args, default_dir):
     print("=== Interactive Mode ===")
     album = args.album or input("Album folder name (on Desktop): ").strip()
     while not album:
         album = input("Album name is required: ").strip()
+
+    custom_dir = input(
+        f"Create album on Desktop ({default_dir})? Press Enter to accept or type another directory: "
+    ).strip()
+    target_dir = os.path.abspath(os.path.expanduser(custom_dir)) if custom_dir else default_dir
 
     urls = list(args.url or [])
     if not urls:
@@ -44,7 +49,7 @@ def interactive_prompt(args):
             urls.append(line)
 
     rate = args.rate or input("Rate limit (optional, e.g., 2M): ").strip()
-    return album, urls, rate
+    return album, target_dir, urls, rate
 
 def resolve_home():
     if "SUDO_USER" in os.environ and os.environ["SUDO_USER"] != "root":
@@ -116,19 +121,22 @@ def main():
 
     args = p.parse_args()
 
+    user, home = resolve_home()
+    default_dir = os.path.join(home,"Desktop")
+
     urls = list(args.url or [])
     if args.stdin and not sys.stdin.isatty():
         urls += read_urls_from_stdin()
 
     album = args.album
     rate = args.rate
+    target_dir = default_dir
 
     # Interactive if album/urls missing
     if not album or not urls:
-        album, urls, rate = interactive_prompt(args)
+        album, target_dir, urls, rate = interactive_prompt(args, default_dir)
 
-    user, home = resolve_home()
-    dest = os.path.join(home,"Desktop",album)
+    dest = os.path.join(target_dir, album)
     os.makedirs(dest, exist_ok=True)
 
     archive = os.path.join(dest,".downloaded.txt")
@@ -158,4 +166,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
