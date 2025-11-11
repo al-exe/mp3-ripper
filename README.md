@@ -1,17 +1,13 @@
 # mp3-ripper
 
-Lightning speed MP3 downloading and tagging from YouTube with automatic cover embedding.
+Lightning fast MP3 ripping from YouTube with automatic metadata tagging and cover embedding.
 
 ## 🎧 What This Does
 
 A lightweight Python tool that:
 
 - Downloads audio (MP3) from YouTube or other yt-dlp supported sites
-- Saves files into a folder on your Desktop
-- Extracts and crops thumbnails to **480×480**
-- Embeds artwork into MP3 metadata as the album cover
-- Deletes the temporary image files afterward
-- Falls back to an interactive prompt if you don't provide arguments
+- Extracts, crops, and tags album art ready thumbnails.
 
 Perfect for building local playlists and clean, metadata-tagged music libraries.
 
@@ -36,8 +32,6 @@ Requires Python **3.8+**
 ---
 
 ## 🚀 Installation
-
-Place the script somewhere convenient:
 
 ```bash
 mv audio_embed.py ~/audio_embed.py
