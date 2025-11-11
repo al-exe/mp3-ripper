@@ -104,47 +104,9 @@ python3 audio_embed.py --album "Jazz Collection"   --url "https://youtube.com/wa
 
 ---
 
-## 📁 Output Location
-
-MP3s are saved to:
-
-```
-~/Desktop/<ALBUM_NAME>/
-```
-
-Example layout:
-
-```
-~/Desktop/Chill Beats/
-  track1.mp3
-  track2.mp3
-  .downloaded.txt
-```
-
-`.downloaded.txt` ensures already-downloaded tracks are skipped in future runs.
-
----
-
 ## 🏁 Done!
 
 Music downloads → cleaned → tagged → artwork embedded.  
 Just run & enjoy your organized local MP3 library 🎶
 
 ---
-
-## 📝 License
-
-MIT — use freely, modify, and share.
-
----
-
-## ⭐ Future Enhancements
-
-- Progress bar UI
-- Optional metadata prompts (artist / album / genre)
-- pip / brew install package
-- GUI wrapper
-
----
-
-PRs and stars welcome!
