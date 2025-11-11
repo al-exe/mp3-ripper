@@ -30,19 +30,19 @@ def read_urls_from_stdin():
     return [ln.strip() for ln in sys.stdin.read().splitlines() if ln.strip()]
 
 def interactive_prompt(args, default_dir):
-    print("=== Interactive Mode ===")
+    print("*** Interactive Mode ***")
     album = args.album or input("Album folder name (on Desktop): ").strip()
     while not album:
         album = input("Album name is required: ").strip()
 
     custom_dir = input(
-        f"Create album on Desktop ({default_dir})? Press Enter to accept or type another directory: "
+        f"Ripper will create ({album}) on Desktop ({default_dir}). Press Enter to accept or specify another directory: "
     ).strip()
     target_dir = os.path.abspath(os.path.expanduser(custom_dir)) if custom_dir else default_dir
 
     urls = list(args.url or [])
     if not urls:
-        print("Enter video/playlist URLs (blank line to finish):")
+        print("Enter video or playlist URLs (blank line to finish):")
         while True:
             line = input().strip()
             if not line: break
@@ -61,7 +61,7 @@ def resolve_home():
     return user, home
 
 def embed_covers(dest):
-    print(f"\n==> Embedding covers in {dest}")
+    print(f"\n*** Embedding covers in {dest}")
     SIZE = "480"
     any_found = False
 
@@ -109,6 +109,16 @@ def embed_covers(dest):
     if not any_found:
         print("No MP3s found for embedding")
     print("✅ Embedding complete")
+
+def delete_jpg_files(dest):
+    print(f"\n*** Removing JPG files in {dest}")
+    removed = 0
+    for root, _, files in os.walk(dest):
+        for f in files:
+            if f.lower().endswith(".jpg"):
+                os.remove(os.path.join(root, f))
+                removed += 1
+    print(f"🗑️ Removed {removed} JPG file(s)")
 
 def main():
     need("yt-dlp"); need("ffmpeg")
@@ -162,6 +172,7 @@ def main():
 
     print("\n✅ Downloads complete")
     embed_covers(dest)
+    delete_jpg_files(dest)
     print(f"\n✨ Done → {dest}")
 
 if __name__ == "__main__":
