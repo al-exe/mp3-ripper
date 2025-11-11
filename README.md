@@ -1,6 +1,6 @@
 # mp3-ripper
 
-Lightning-speed MP3 downloading and tagging from YouTube — with automatic cover embedding.
+Lightning speed MP3 downloading and tagging from YouTube with automatic cover embedding.
 
 ## 🎧 What This Does
 
