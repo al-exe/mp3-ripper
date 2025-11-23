@@ -4,10 +4,10 @@ Lightning fast MP3 ripping from YouTube with automatic metadata tagging and cove
 
 ## 🎧 What This Does
 
-A lightweight Python tool that:
-
 - Downloads audio (MP3) from YouTube or other yt-dlp supported sites
-- Extracts, crops, and tags album art ready thumbnails.
+- Crops/embeds cover art and writes ID3 metadata (title/album/artist)
+- Saves to `~/Desktop/<ALBUM>/` with a download archive to avoid duplicates
+- Can drive downloads from a `library.json` file (`--all` or `--albums ...`)
 
 Perfect for building local playlists and clean, metadata-tagged music libraries.
 
@@ -31,75 +31,44 @@ Requires Python **3.8+**
 
 ---
 
-## 🚀 Installation
-
-```bash
-mv audio_embed.py ~/audio_embed.py
-chmod +x ~/audio_embed.py
-```
-
-Run it:
-
-```bash
-python3 ~/audio_embed.py
-```
-
----
-
 ## 🛠️ Usage
 
-### **Interactive Mode (no flags)**  
-Script will ask you for album name & URLs:
-
+From the repo root:
 ```bash
-python3 audio_embed.py
+python3 ripper.py [flags...]
 ```
 
-Prompts will ask for:
+Outputs to `~/Desktop/<album>/`.
 
-- Album folder name
-- Video / playlist URLs
-- Optional rate limit (ex. `2M`)
-
----
-
-### **One-Shot Download**
-
+### Interactive (prompts)
 ```bash
-python3 audio_embed.py --album "Chill Beats"   --url "https://youtube.com/watch?v=VIDEO_ID"
+python3 ripper.py
 ```
+Prompts for album name, optional album artist, URLs, and target directory.
 
----
-
-### **Multiple URLs**
-
+### Single album (explicit args)
 ```bash
-python3 audio_embed.py --album "Focus Session"   --url "https://youtube.com/watch?v=AAA111"   --url "https://youtube.com/watch?v=BBB222"
+python3 ripper.py --album "Chill Beats" --url "https://youtube.com/watch?v=VIDEO_ID"
 ```
+Add more URLs with repeated `--url`. Optional flags: `--artist "Override Artist"`, `--rate 2M`, `--stdin` to read URLs from stdin.
 
----
+### From library.json
+- Download everything:  
+  ```bash
+  python3 ripper.py --all
+  ```
+- Download selected albums:  
+  ```bash
+  python3 ripper.py --albums album-one album-two
+  ```
+- Custom library path: add `--library /path/to/library.json`
+- Global artist override: add `--artist "Some Artist"`
 
-### **Pipe URLs from a File**
-
-```bash
-cat urls.txt | python3 audio_embed.py --album "Morning Mix" --stdin
-```
-
-`urls.txt` example:
-
-```
-https://youtube.com/watch?v=ABC123
-https://youtube.com/watch?v=DEF456
-```
-
----
-
-### **Rate-Limited Download**
-
-Useful for slower connections or throttled networks:
-
-```bash
-python3 audio_embed.py --album "Jazz Collection"   --url "https://youtube.com/watch?v=SOMEVIDEO"   --rate 1.5M
+`library.json` maps album names to objects:
+```json
+{
+  "album-slug": { "url": "https://playlist-or-video", "artist": "Optional Artist" }
+}
 ```
 
 ---
@@ -107,6 +76,4 @@ python3 audio_embed.py --album "Jazz Collection"   --url "https://youtube.com/wa
 ## 🏁 Done!
 
 Music downloads → cleaned → tagged → artwork embedded.  
-Just run & enjoy your organized local MP3 library 🎶
-
----
+Run & enjoy your organized local MP3 library 🎶
