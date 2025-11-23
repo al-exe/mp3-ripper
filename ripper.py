@@ -278,6 +278,7 @@ def main():
     p.add_argument("--rate", default="", help="Limit (e.g., 2M)")
     p.add_argument("--stdin", action="store_true", help="Read URLs from stdin")
     p.add_argument("--all", action="store_true", help="Download every album in the library file")
+    p.add_argument("--albums", nargs="+", help="Download only these albums from the library file (space-separated list)")
     p.add_argument("--library", default="library.json", help="Path to the library JSON (default: library.json)")
 
     args = p.parse_args()
@@ -289,6 +290,11 @@ def main():
     rate = args.rate
     album_artist = args.artist.strip() if args.artist else None
     target_dir = default_dir
+    album_subset = [a.strip() for a in args.albums] if args.albums else []
+
+    if args.all and album_subset:
+        eprint("❌ Choose either --all or --albums, not both")
+        sys.exit(1)
 
     if args.all:
         library = load_library(args.library)
@@ -300,6 +306,20 @@ def main():
             urls, entry_artist = parse_library_entry(album, entry)
             effective_artist = album_artist or entry_artist
             download_album(album, urls, target_dir, rate, effective_artist)
+        return
+
+    if album_subset:
+        library = load_library(args.library)
+        missing = [a for a in album_subset if a not in library]
+        if missing:
+            eprint(f"❌ Missing album(s) in library: {', '.join(missing)}")
+            sys.exit(1)
+
+        for album_name in album_subset:
+            entry = library[album_name]
+            urls, entry_artist = parse_library_entry(album_name, entry)
+            effective_artist = album_artist or entry_artist
+            download_album(album_name, urls, target_dir, rate, effective_artist)
         return
 
     urls = list(args.url or [])
