@@ -10,9 +10,10 @@ Audio downloader + cover embedder utility.
     * CLI args
     * Interactive prompt if args missing
     * Optional album artist override
+    * Library-driven batch downloads (--all)
 """
 
-import argparse, subprocess, os, sys, tempfile, shutil, getpass, pathlib
+import argparse, subprocess, os, sys, tempfile, shutil, getpass, pathlib, json
 
 def eprint(*a, **k): print(*a, file=sys.stderr, **k)
 
@@ -56,7 +57,7 @@ def interactive_prompt(args, default_dir):
                 break
             urls.append(line)
 
-    return album, target_dir, urls, album_artist
+    return album, album_artist, target_dir, urls
 
 def resolve_home():
     if "SUDO_USER" in os.environ and os.environ["SUDO_USER"] != "root":
@@ -67,7 +68,47 @@ def resolve_home():
         home = os.path.expanduser("~")
     return user, home
 
-def embed_covers(dest, album_artist=None):
+def load_library(path):
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+    except FileNotFoundError:
+        eprint(f"❌ Library not found: {path}")
+        sys.exit(1)
+    except json.JSONDecodeError as exc:
+        eprint(f"❌ Could not parse library ({path}): {exc}")
+        sys.exit(1)
+
+    if not isinstance(data, dict):
+        eprint("❌ Library JSON must be an object mapping album names to entries")
+        sys.exit(1)
+
+    return data
+
+def parse_library_entry(album, entry):
+    if not isinstance(entry, dict):
+        eprint(f"❌ Library entry for '{album}' must be an object with a 'url'")
+        sys.exit(1)
+    if "url" not in entry:
+        eprint(f"❌ Library entry for '{album}' is missing a 'url'")
+        sys.exit(1)
+
+    url_field = entry["url"]
+    if isinstance(url_field, str):
+        urls = [url_field]
+    elif isinstance(url_field, list):
+        urls = [u for u in url_field if u]
+    else:
+        eprint(f"❌ Library entry for '{album}' has an invalid 'url' value")
+        sys.exit(1)
+
+    album_artist = entry.get("artist")
+    if album_artist:
+        album_artist = str(album_artist).strip() or None
+
+    return urls, album_artist
+
+def embed_covers(dest, album_artist=None, album_name=None):
     print(f"\n*** Embedding covers / metadata in {dest}")
     SIZE = "480"
     any_found = False
@@ -129,31 +170,47 @@ def embed_covers(dest, album_artist=None):
                     "-metadata:s:v", "title=Album cover",
                     "-metadata:s:v", "comment=Cover (front)",
                 ]
+                metadata_flags = []
                 if album_artist:
-                    cmd += ["-metadata", f"artist={album_artist}"]
+                    metadata_flags += [
+                        "-metadata", f"artist={album_artist}",
+                        "-metadata", f"album_artist={album_artist}",
+                    ]
+                if album_name:
+                    metadata_flags += ["-metadata", f"album={album_name}"]
                 # Title metadata matches filename
-                cmd += ["-metadata", f"title={track_title}", tmpmp3]
+                metadata_flags += ["-metadata", f"title={track_title}"]
+
+                cmd += metadata_flags + [tmpmp3]
 
                 run(cmd)
 
                 shutil.move(tmpmp3, mp3)
                 os.remove(tmpimg)
-                print(f"[embed] cover + title/artist updated → {f} (art: {art_file})")
+                print(f"[embed] cover + title/artist/album updated → {f} (art: {art_file})")
 
             else:
-                # No artwork found for this MP3, but still normalize title/artist
+                # No artwork found for this MP3, but still normalize title/artist/album
                 cmd = [
                     "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
                     "-i", mp3,
                     "-c", "copy",
                 ]
+                metadata_flags = []
                 if album_artist:
-                    cmd += ["-metadata", f"artist={album_artist}"]
-                cmd += ["-metadata", f"title={track_title}", tmpmp3]
+                    metadata_flags += [
+                        "-metadata", f"artist={album_artist}",
+                        "-metadata", f"album_artist={album_artist}",
+                    ]
+                if album_name:
+                    metadata_flags += ["-metadata", f"album={album_name}"]
+                metadata_flags += ["-metadata", f"title={track_title}", tmpmp3]
+
+                cmd += metadata_flags
 
                 run(cmd)
                 shutil.move(tmpmp3, mp3)
-                print(f"[embed] title/artist updated (no art) → {f}")
+                print(f"[embed] title/artist/album updated (no art) → {f}")
 
     if not any_found:
         print("No MP3s found for embedding/metadata updates")
@@ -169,47 +226,20 @@ def delete_image_files(dest):
                 removed += 1
     print(f"🗑️ Removed {removed} JPG file(s)")
 
-def main():
-    need("yt-dlp"); need("ffmpeg")
-
-    p = argparse.ArgumentParser(description="Download audio + embed artwork")
-    p.add_argument("--album", help="Folder name (Desktop)")
-    p.add_argument("--artist", help="Album artist (override track artists)")
-    p.add_argument("--url", action="append", help="URL or playlist (repeatable)")
-    p.add_argument("--rate", default="", help="Limit (e.g., 2M)")
-    p.add_argument("--stdin", action="store_true", help="Read URLs from stdin")
-
-    args = p.parse_args()
-
-    user, home = resolve_home()
-    default_dir = os.path.join(home, "Desktop")
-
-    urls = list(args.url or [])
-    if args.stdin and not sys.stdin.isatty():
-        urls += read_urls_from_stdin()
-
-    album = args.album
-    rate = args.rate
-    album_artist = args.artist
-    target_dir = default_dir
-
-    if not album or not urls:
-        album, target_dir, urls, album_artist = interactive_prompt(args, default_dir)
-
+def download_album(album, urls, target_dir, rate, album_artist=None):
     dest = os.path.join(target_dir, album)
     os.makedirs(dest, exist_ok=True)
 
     archive = os.path.join(dest, ".downloaded.txt")
     pathlib.Path(archive).touch()
 
-    print(f"Album: {album}")
+    print(f"\nAlbum: {album}")
     if album_artist:
         print(f"Artist: {album_artist}")
     print(f"Folder: {dest}")
     if rate:
         print(f"Limit: {rate}")
 
-    # yt-dlp: download + metadata
     base = [
         "yt-dlp", "-x", "--audio-format", "mp3", "--audio-quality", "0",
         "--add-metadata", "--write-thumbnail", "--convert-thumbnails", "jpg",
@@ -234,9 +264,54 @@ def main():
         run(base + [u])
 
     print("\n✅ Downloads complete")
-    embed_covers(dest, album_artist=album_artist)
+    embed_covers(dest, album_artist=album_artist, album_name=album)
     delete_image_files(dest)
     print(f"\n✨ Done → {dest}")
 
+def main():
+    need("yt-dlp"); need("ffmpeg")
+
+    p = argparse.ArgumentParser(description="Download audio + embed artwork")
+    p.add_argument("--album", help="Folder name (Desktop)")
+    p.add_argument("--artist", help="Album artist (override track artists)")
+    p.add_argument("--url", action="append", help="URL or playlist (repeatable)")
+    p.add_argument("--rate", default="", help="Limit (e.g., 2M)")
+    p.add_argument("--stdin", action="store_true", help="Read URLs from stdin")
+    p.add_argument("--all", action="store_true", help="Download every album in the library file")
+    p.add_argument("--library", default="library.json", help="Path to the library JSON (default: library.json)")
+
+    args = p.parse_args()
+
+    user, home = resolve_home()
+    default_dir = os.path.join(home, "Desktop")
+
+    album = args.album
+    rate = args.rate
+    album_artist = args.artist.strip() if args.artist else None
+    target_dir = default_dir
+
+    if args.all:
+        library = load_library(args.library)
+        if not library:
+            eprint(f"❌ Library is empty: {args.library}")
+            sys.exit(1)
+
+        for album, entry in library.items():
+            urls, entry_artist = parse_library_entry(album, entry)
+            effective_artist = album_artist or entry_artist
+            download_album(album, urls, target_dir, rate, effective_artist)
+        return
+
+    urls = list(args.url or [])
+    if args.stdin and not sys.stdin.isatty():
+        urls += read_urls_from_stdin()
+
+    if not album or not urls:
+        album, album_artist, target_dir, urls = interactive_prompt(args, default_dir)
+
+    if album_artist:
+        album_artist = album_artist.strip() or None
+
+    download_album(album, urls, target_dir, rate, album_artist)
 if __name__ == "__main__":
     main()
