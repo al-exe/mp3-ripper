@@ -241,7 +241,9 @@ def download_album(album, urls, target_dir, rate, album_artist=None):
         print(f"Limit: {rate}")
 
     base = [
-        "yt-dlp", "-x", "--audio-format", "mp3", "--audio-quality", "0",
+        "yt-dlp", "--ignore-config", "--yes-playlist",
+        "--playlist-end", "999999",
+        "-x", "--audio-format", "mp3", "--audio-quality", "0",
         "--add-metadata", "--write-thumbnail", "--convert-thumbnails", "jpg",
         "--no-embed-thumbnail", "--ignore-errors",
 
