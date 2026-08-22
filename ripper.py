@@ -243,6 +243,9 @@ def download_album(album, urls, target_dir, rate, album_artist=None):
     base = [
         "yt-dlp", "--ignore-config", "--yes-playlist",
         "--playlist-end", "999999",
+        # Current YouTube guidance recommends mweb with an automatic GVS
+        # PO-token provider; this avoids 403s from tokenless media URLs.
+        "--extractor-args", "youtube:player_client=mweb",
         "-x", "--audio-format", "mp3", "--audio-quality", "0",
         "--add-metadata", "--write-thumbnail", "--convert-thumbnails", "jpg",
         "--no-embed-thumbnail", "--ignore-errors",
